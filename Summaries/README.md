@@ -2,4 +2,4 @@
 
 This directory contains scripts to compute biobank-specific cohort summaries, such as sample size, follow up time, and age distributions. This relies on existing phenotype files used for GWAS, as well as basic information on enrollment and last followup. Runtime is expected to be a few seconds per phenotype. 
 
-``gbmi_cohort_summaries.R`` is an all-in-one script to summarize overall biobank cohort, onset phenotypes, and progression phenotypes. Examples for running each analysis and sharing results are detailed in ``gbmi_cohort_summaries.html``. 
+``gbmi_cohort_summaries.R`` is an all-in-one script to summarize overall biobank cohort, onset phenotypes, and progression phenotypes. Examples for running each analysis and sharing results are detailed in ``gbmi_cohort_summaries.pdf``. 
