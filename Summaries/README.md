@@ -5,4 +5,4 @@ This directory contains scripts to compute biobank-specific cohort summaries, su
 ``gbmi_cohort_summaries.R`` is an all-in-one script to summarize overall biobank cohort, onset phenotypes, and progression phenotypes. Examples for running each analysis and sharing results are detailed below
 
 - [PDF documentation](gbmi_cohort_summaries.pdf)
-- [HTML documentation (download)](https://raw.githubusercontent.com/Longitudinal-Metea/main/Summaries/gbmi_cohort_summaries.html)
+- [HTML documentation (download)](https://raw.githubusercontent.com/Longitudinal-Meta/main/Summaries/gbmi_cohort_summaries.html)
