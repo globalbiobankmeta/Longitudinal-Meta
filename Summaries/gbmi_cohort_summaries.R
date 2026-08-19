@@ -440,7 +440,9 @@ join_followup <- function(cohort,
 }
 
 # clean up KM curve in case of privacy issues
-group_km <- function(onset_km, n_min = 5, group_cols = c("ancestry", "sex"), min_risk = n_min) {
+group_km <- function(onset_km, n_min = 5, 
+                     group_cols = c("ancestry", "sex"), 
+                     min_risk = n_min) {
   
   bin_one_group <- function(km_df) {
     km_df <- km_df %>% arrange(time)
@@ -724,7 +726,7 @@ onset_summary <- function(phenofile = NULL,
                           male_value = 1,
                           female_value = 0,
                           units = 'years', # units of eventage_col in the input file(s): years (default), days, or months
-                          km_min = 0,
+                          km_min = 0, km_round = F,
                           min_cell_count = 0,
                           skip_missing_ancestries = FALSE) {
   
@@ -780,18 +782,34 @@ onset_summary <- function(phenofile = NULL,
     summarize(n = n(), .groups = 'drop') %>%
     suppress_histogram(min_cell_count)
   
-  onset_km <- onset_combined %>%
-    group_by(ancestry, sex) %>%
-    nest() %>%
-    mutate(
-      fit = map(data, ~ survfit(Surv(age, event) ~ 1, data = .x)),
-      km = map(fit, broom::tidy),
-      n_total = map_int(data, nrow),
-      n_events_total = map_int(data, ~ sum(.x$event == 1, na.rm = TRUE))
-    ) %>%
-    select(-data, -fit) %>%
-    unnest(km) %>%
-    ungroup()
+  if (km_round) {
+    onset_km <- onset_combined %>%
+      mutate(age = round(age)) %>%
+      group_by(ancestry, sex) %>%
+      nest() %>%
+      mutate(
+        fit = map(data, ~ survfit(Surv(age, event) ~ 1, data = .x)),
+        km = map(fit, broom::tidy),
+        n_total = map_int(data, nrow),
+        n_events_total = map_int(data, ~ sum(.x$event == 1, na.rm = TRUE))
+      ) %>%
+      select(-data, -fit) %>%
+      unnest(km) %>%
+      ungroup()
+  } else {
+    onset_km <- onset_combined %>%
+      group_by(ancestry, sex) %>%
+      nest() %>%
+      mutate(
+        fit = map(data, ~ survfit(Surv(age, event) ~ 1, data = .x)),
+        km = map(fit, broom::tidy),
+        n_total = map_int(data, nrow),
+        n_events_total = map_int(data, ~ sum(.x$event == 1, na.rm = TRUE))
+      ) %>%
+      select(-data, -fit) %>%
+      unnest(km) %>%
+      ungroup()
+  }
   
   if (km_min > 0) onset_km <- group_km(onset_km, n_min = km_min)
   
@@ -821,7 +839,7 @@ prog_summary <- function(phenofile = NULL,
                          male_value = 1,
                          female_value = 0,
                          units = 'years,years', # units of eventage_col/onsetage_col/time_to_progression_col in the input file(s): years (default), days, or months
-                         km_min = 0,
+                         km_min = 0, km_round = F,
                          min_cell_count = 0,
                          skip_missing_ancestries = FALSE) {
   
@@ -923,23 +941,40 @@ prog_summary <- function(phenofile = NULL,
     summarize(n = n(), .groups = 'drop') %>%
     suppress_histogram(min_cell_count)
   
-  fit_km <- function(time_col) {
-    prog_combined %>%
-      group_by(ancestry, sex) %>%
-      nest() %>%
-      mutate(
-        fit = map(data, ~ survfit(as.formula(paste0("Surv(", time_col, ", event) ~ 1")), data = .x)),
-        km = map(fit, broom::tidy),
-        n_total = map_int(data, nrow),
-        n_events_total = map_int(data, ~ sum(.x$event == 1, na.rm = TRUE))
-      ) %>%
-      select(-data, -fit) %>%
-      unnest(km) %>%
-      ungroup()
+  fit_km <- function(time_col, km_round) {
+    if (km_round) {
+      prog_combined %>%
+        mutate_at(.vars=vars(any_of(time_col)), .funs='round') %>%
+        group_by(ancestry, sex) %>%
+        nest() %>%
+        mutate(
+          fit = map(data, ~ survfit(as.formula(paste0("Surv(", time_col, ", event) ~ 1")), data = .x)),
+          km = map(fit, broom::tidy),
+          n_total = map_int(data, nrow),
+          n_events_total = map_int(data, ~ sum(.x$event == 1, na.rm = TRUE))
+        ) %>%
+        select(-data, -fit) %>%
+        unnest(km) %>%
+        ungroup()
+    } else {
+      prog_combined %>%
+        group_by(ancestry, sex) %>%
+        nest() %>%
+        mutate(
+          fit = map(data, ~ survfit(as.formula(paste0("Surv(", time_col, ", event) ~ 1")), data = .x)),
+          km = map(fit, broom::tidy),
+          n_total = map_int(data, nrow),
+          n_events_total = map_int(data, ~ sum(.x$event == 1, na.rm = TRUE))
+        ) %>%
+        select(-data, -fit) %>%
+        unnest(km) %>%
+        ungroup()
+    }
+    
   }
-  prog_age_km <- fit_km("eventAge")
-  prog_year_km <- fit_km("year_to_progression")
-  prog_month_km <- fit_km("month_to_progression")
+  prog_age_km <- fit_km("eventAge", km_round)
+  prog_year_km <- fit_km("year_to_progression", km_round)
+  prog_month_km <- fit_km("month_to_progression", km_round)
   
   if (km_min > 0) {
     prog_age_km <- group_km(prog_age_km, n_min = km_min)
@@ -977,6 +1012,8 @@ if (is_main()) {
                 help = "Comma-separated labels aligned with --pheno-files; omit if files already have an ancestry column"),
     make_option("--skip-missing-ancestries", action = "store_true", default = FALSE,
                 help = "Skip --pheno-files entries that don't exist instead of failing the run - useful when templating a file list (e.g. ${pheno}_eur.txt,${pheno}_afr.txt,...) across phenotypes that don't all have every ancestry"),
+    make_option("--km-round", action = "store_true", default = FALSE,
+                help = "round KM time points to nearest integer"),
     make_option("--prefix", type = "character", help = "Output file prefix [REQUIRED]"),
     make_option("--min-cell-count", type = "integer", default = 0,
                 help = "Disclosure: suppress counts below this (default: 0)"),
@@ -1058,7 +1095,7 @@ if (is_main()) {
                   birthyear_col = opt[["birthyear-col"]], sex_col = opt[["sex-col"]], ancestry_col = opt[["ancestry-col"]],
                   male_value = opt[["male-value"]], female_value = opt[["female-value"]],
                   units = opt[["units"]],
-                  km_min = opt[["km-min"]], min_cell_count = opt[["min-cell-count"]],
+                  km_min = opt[["km-min"]], km_round = opt[["km-round"]], min_cell_count = opt[["min-cell-count"]],
                   skip_missing_ancestries = opt[["skip-missing-ancestries"]])
   } else if (opt$mode == "progression") {
     prog_summary(prefix = opt$prefix, pheno_files = pheno_files, ancestry_labels = ancestry_labels,
@@ -1068,7 +1105,7 @@ if (is_main()) {
                  ancestry_col = opt[["ancestry-col"]],
                  male_value = opt[["male-value"]], female_value = opt[["female-value"]],
                  units = opt[["units"]],
-                 km_min = opt[["km-min"]], min_cell_count = opt[["min-cell-count"]],
+                 km_min = opt[["km-min"]], km_round = opt[["km-round"]], min_cell_count = opt[["min-cell-count"]],
                  skip_missing_ancestries = opt[["skip-missing-ancestries"]])
   } else {
     stop("--mode must be one of: cohort, onset, progression (got '", opt$mode, "')")
