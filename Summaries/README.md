@@ -6,9 +6,6 @@ This directory contains scripts to compute biobank-specific cohort summaries, su
 
 <!DOCTYPE html>
 <html>
-<head>
-    <title>My PDF Front Page</title>
-</head>
 <body style="margin:0; padding:0;">
     <embed src="gbmi_cohort_summaries.pdf" type="application/pdf" width="100%" height="100vh" />
 </body>
