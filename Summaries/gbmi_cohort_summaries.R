@@ -598,7 +598,8 @@ overall_summary <- function(cohort = NULL,
                             enrollment_age_col = NULL,
                             followup_col = 'age_death_or_lastvisit',
                             skip_missing_ancestries = FALSE,
-                            min_cell_count = 0) {
+                            min_cell_count = 0,
+                            na.rm = F) {
   
   units <- match.arg(units, c("years", "days", "months"))
   
@@ -670,7 +671,8 @@ overall_summary <- function(cohort = NULL,
   cohort_summary <- cohort_combined %>%
     group_by(ancestry, sex) %>%
     summarize_at(.vars = vars(birthyear, enrollment_age, enrollment_year, followup_age, followup_time),
-                 .funs = list(mean = 'mean', median = 'median', sd = 'sd')) %>%
+                 .funs = list(mean = 'mean', median = 'median', sd = 'sd'),
+                 na.rm=na.rm) %>%
     ungroup()
   
   # histograms
@@ -728,7 +730,8 @@ onset_summary <- function(phenofile = NULL,
                           units = 'years', # units of eventage_col in the input file(s): years (default), days, or months
                           km_min = 0, km_round = F,
                           min_cell_count = 0,
-                          skip_missing_ancestries = FALSE) {
+                          skip_missing_ancestries = FALSE,
+                          na.rm = F) {
   
   units <- match.arg(units, c("years", "days", "months"))
   
@@ -767,7 +770,8 @@ onset_summary <- function(phenofile = NULL,
   onset_summary_tbl <- onset_combined %>%
     group_by(ancestry, sex, event) %>%
     summarize_at(.vars = vars(age, eventyear),
-                 .funs = list(mean = 'mean', median = 'median', sd = 'sd')) %>%
+                 .funs = list(mean = 'mean', median = 'median', sd = 'sd'), 
+                 na.rm=na.rm) %>%
     ungroup()
   
   onset_age_histogram <- onset_combined %>%
@@ -841,7 +845,8 @@ prog_summary <- function(phenofile = NULL,
                          units = 'years,years', # units of eventage_col/onsetage_col/time_to_progression_col in the input file(s): years (default), days, or months
                          km_min = 0, km_round = F,
                          min_cell_count = 0,
-                         skip_missing_ancestries = FALSE) {
+                         skip_missing_ancestries = FALSE,
+                         na.rm = F) {
   
   unit_split = strsplit(units, split=',')[[1]]
   units <- unname(sapply(unit_split, FUN=function(x) match.arg(x, c("years", "days", "months"))))
@@ -914,7 +919,8 @@ prog_summary <- function(phenofile = NULL,
   prog_summary_tbl <- prog_combined %>%
     group_by(ancestry, sex, event) %>%
     summarize_at(.vars = vars(onsetAge, eventAge, eventyear),
-                 .funs = list(mean = 'mean', median = 'median', sd = 'sd')) %>%
+                 .funs = list(mean = 'mean', median = 'median', sd = 'sd'), 
+                 na.rm=na.rm) %>%
     ungroup()
   
   prog_baseline_histogram <- prog_combined %>%
@@ -1014,6 +1020,8 @@ if (is_main()) {
                 help = "Skip --pheno-files entries that don't exist instead of failing the run - useful when templating a file list (e.g. ${pheno}_eur.txt,${pheno}_afr.txt,...) across phenotypes that don't all have every ancestry"),
     make_option("--km-round", action = "store_true", default = FALSE,
                 help = "round KM time points to nearest integer"),
+    make_option("--na-keep", action = "store_true", default = FALSE,
+                help = "keep NAs for cohort summary"),
     make_option("--prefix", type = "character", help = "Output file prefix [REQUIRED]"),
     make_option("--min-cell-count", type = "integer", default = 0,
                 help = "Disclosure: suppress counts below this (default: 0)"),
@@ -1075,6 +1083,8 @@ if (is_main()) {
     dir.create(dirname(opt$prefix), recursive = T)
   }
   
+  na.rm = !opt[['na-keep']]
+  
   if (opt$mode == "cohort") {
     overall_summary(prefix = opt$prefix, pheno_files = pheno_files, ancestry_labels = ancestry_labels,
                     enrollment_file = opt[["enrollment-file"]], enrollment_id_col = opt[["enrollment-id-col"]],
@@ -1086,6 +1096,7 @@ if (is_main()) {
                     id_col = opt[["id-col"]], sex_col = opt[["sex-col"]], ancestry_col = opt[["ancestry-col"]],
                     birthyear_col = opt[["birthyear-col"]],
                     units = opt[["units"]],
+                    na.rm = na.rm,
                     male_value = opt[["male-value"]], female_value = opt[["female-value"]],
                     followup_col = opt[["followup-col"]], min_cell_count = opt[["min-cell-count"]],
                     skip_missing_ancestries = opt[["skip-missing-ancestries"]])
@@ -1095,6 +1106,7 @@ if (is_main()) {
                   birthyear_col = opt[["birthyear-col"]], sex_col = opt[["sex-col"]], ancestry_col = opt[["ancestry-col"]],
                   male_value = opt[["male-value"]], female_value = opt[["female-value"]],
                   units = opt[["units"]],
+                  na.rm = na.rm,
                   km_min = opt[["km-min"]], km_round = opt[["km-round"]], min_cell_count = opt[["min-cell-count"]],
                   skip_missing_ancestries = opt[["skip-missing-ancestries"]])
   } else if (opt$mode == "progression") {
@@ -1105,6 +1117,7 @@ if (is_main()) {
                  ancestry_col = opt[["ancestry-col"]],
                  male_value = opt[["male-value"]], female_value = opt[["female-value"]],
                  units = opt[["units"]],
+                 na.rm = na.rm,
                  km_min = opt[["km-min"]], km_round = opt[["km-round"]], min_cell_count = opt[["min-cell-count"]],
                  skip_missing_ancestries = opt[["skip-missing-ancestries"]])
   } else {
