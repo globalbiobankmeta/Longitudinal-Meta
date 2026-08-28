@@ -9,4 +9,5 @@ This directory contains scripts to compute biobank-specific cohort summaries, su
 
 Latest updates to ``gbmi_cohort_summaries.R``
 
-- Aug 19, 2026: added "--km-round" flag as an option to round event times to nearest integer
+- Aug 28, 2026: modified to remove NAs by default from summaries (i.e., mean/median/sd); NAs can remain in the histogram, and otherwise can be kept by adding the optional flag ``--na-keep`` to the R command
+- Aug 19, 2026: added ``--km-round`` flag as an option to round event times to nearest integer
