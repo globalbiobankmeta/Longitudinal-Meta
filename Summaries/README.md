@@ -9,5 +9,4 @@ This directory contains scripts to compute biobank-specific cohort summaries, su
 
 Latest updates to ``gbmi_cohort_summaries.R``
 
-- Aug 28, 2026: added "--na_remove" flag to remove NAs when computing summaries
 - Aug 19, 2026: added "--km-round" flag as an option to round event times to nearest integer
